@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f9d74">
+<title>مهامي</title>
+<style>
+:root{--g:#0f9d74;--g2:#0b7d5c;--bg:#f3f6f5;--card:#fff;--tx:#17211e;--mu:#6b7a76;--ln:#e6ecea;--red:#e5484d;--am:#f5a524}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;min-height:100vh;padding-bottom:150px}
+header{background:linear-gradient(135deg,var(--g),var(--g2));color:#fff;padding:calc(env(safe-area-inset-top) + 18px) 18px 56px;border-radius:0 0 28px 28px}
+header h1{margin:0;font-size:22px}header p{margin:4px 0 0;opacity:.85;font-size:14px}
+.stats{margin:-40px 14px 0;background:var(--card);border-radius:20px;padding:16px;box-shadow:0 6px 20px rgba(0,0,0,.08);display:flex;gap:14px;align-items:center}
+.ring{width:84px;height:84px;border-radius:50%;background:conic-gradient(var(--g) calc(var(--p)*1%),var(--ln) 0);display:grid;place-items:center;flex:none}
+.ring b{width:64px;height:64px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:18px}
+.nums{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center}
+.nums div{background:var(--bg);border-radius:12px;padding:8px 2px}.nums strong{display:block;font-size:20px}.nums span{font-size:11px;color:var(--mu)}
+.nums .d strong{color:var(--g)}.nums .p strong{color:var(--am)}.nums .o strong{color:var(--red)}
+.tabs{display:flex;gap:8px;margin:14px;overflow-x:auto}
+.tabs button{flex:1;border:0;background:#fff;border-radius:999px;padding:10px;font:inherit;font-size:14px;color:var(--mu);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.tabs button.on{background:var(--g);color:#fff}
+.day{margin:14px 14px 6px;font-size:13px;color:var(--mu);display:flex;justify-content:space-between}
+.day em{font-style:normal;color:var(--g);font-weight:600}
+.task{display:flex;align-items:center;gap:12px;background:var(--card);margin:6px 14px;padding:14px;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.05);animation:in .25s}
+@keyframes in{from{opacity:0;transform:translateY(8px)}}
+.chk{width:26px;height:26px;border-radius:50%;border:2px solid #c3cfcb;flex:none;display:grid;place-items:center;background:#fff;padding:0;color:#fff;font-size:15px}
+.task.done .chk{background:var(--g);border-color:var(--g)}
+.task.done .t{text-decoration:line-through;color:var(--mu)}
+.t{flex:1;font-size:16px;line-height:1.4;word-break:break-word}
+.del{border:0;background:none;color:#b3bfbb;font-size:20px;padding:4px 8px}
+.empty{text-align:center;color:var(--mu);margin:50px 20px}
+.bar{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:12px 14px calc(env(safe-area-inset-bottom) + 12px);box-shadow:0 -4px 18px rgba(0,0,0,.08);border-radius:22px 22px 0 0}
+.row{display:flex;gap:8px;align-items:center}
+.row input[type=text]{flex:1;border:1.5px solid var(--ln);border-radius:14px;padding:13px;font:inherit;font-size:16px;background:var(--bg);min-width:0}
+.row input[type=date]{border:1.5px solid var(--ln);border-radius:14px;padding:11px 6px;font:inherit;font-size:13px;background:var(--bg);width:128px}
+.add{border:0;background:var(--g);color:#fff;border-radius:14px;width:48px;height:48px;font-size:24px}
+.mic{border:0;background:var(--red);color:#fff;border-radius:50%;width:56px;height:56px;font-size:24px;flex:none;box-shadow:0 4px 12px rgba(229,72,77,.4)}
+.mic.rec{animation:pulse 1s infinite}
+@keyframes pulse{50%{transform:scale(1.12);box-shadow:0 0 0 12px rgba(229,72,77,.15)}}
+.hint{font-size:12px;color:var(--mu);margin:0 4px 8px;min-height:16px}
+</style>
+</head>
+<body>
+<header><h1 id="hi">أهلاً يا دكتور صابر</h1><p id="dt"></p></header>
+<section class="stats">
+ <div class="ring" id="ring"><b id="pc">0%</b></div>
+ <div class="nums"><div class="d"><strong id="nd">0</strong><span>تمت</span></div><div class="p"><strong id="np">0</strong><span>متبقية</span></div><div class="o"><strong id="no">0</strong><span>متأخرة</span></div></div>
+</section>
+<nav class="tabs" id="tabs">
+ <button data-f="all" class="on">الكل</button><button data-f="pending">المتبقية</button><button data-f="done">المنجزة</button>
+</nav>
+<main id="list"></main>
+<div class="bar">
+ <div class="hint" id="hint">اضغط المايك وقول المهمة، مثلاً: "بكرة مراجعة التقارير"</div>
+ <div class="row">
+  <button class="mic" id="mic" aria-label="تسجيل صوتي"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="12" rx="3" fill="#fff"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+  <input type="text" id="txt" placeholder="اكتب مهمة جديدة…" enterkeyhint="done">
+  <input type="date" id="when">
+  <button class="add" id="add" aria-label="إضافة">+</button>
+ </div>
+</div>
+<script>
+const $=s=>document.querySelector(s),K='mahami.v1';
+let tasks=JSON.parse(localStorage.getItem(K)||'null'),filter='all';
+const iso=d=>{const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+const today=()=>iso(new Date()),plus=n=>{const d=new Date();d.setDate(d.getDate()+n);return iso(d)};
+if(!tasks)tasks=[{id:1,t:'مراجعة جدول المرضى',d:today(),done:true},{id:2,t:'اجتماع الفريق الطبي',d:today(),done:false},{id:3,t:'تجديد كورس الإسعافات الأولية',d:plus(1),done:false},{id:4,t:'مكالمة المورّد',d:plus(-1),done:false}];
+const save=()=>{localStorage.setItem(K,JSON.stringify(tasks));render()};
+const AR=new Intl.DateTimeFormat('ar-EG',{weekday:'long',day:'numeric',month:'long'});
+const label=d=>d===today()?'النهارده':d===plus(1)?'بكرة':d===plus(-1)?'امبارح':AR.format(new Date(d+'T12:00'));
+function render(){
+ $('#dt').textContent=AR.format(new Date())+' — '+new Intl.DateTimeFormat('ar-EG',{year:'numeric'}).format(new Date());
+ const n=tasks.length,dn=tasks.filter(x=>x.done).length,od=tasks.filter(x=>!x.done&&x.d<today()).length;
+ const pc=n?Math.round(dn/n*100):0;
+ $('#ring').style.setProperty('--p',pc);$('#pc').textContent=pc.toLocaleString('ar-EG')+'٪';
+ $('#nd').textContent=dn.toLocaleString('ar-EG');$('#np').textContent=(n-dn).toLocaleString('ar-EG');$('#no').textContent=od.toLocaleString('ar-EG');
+ const v=tasks.filter(x=>filter==='all'||(filter==='done')===x.done).sort((a,b)=>a.d.localeCompare(b.d)||a.id-b.id);
+ const days=[...new Set(v.map(x=>x.d))];
+ $('#list').innerHTML=days.length?days.map(d=>{const g=v.filter(x=>x.d===d);const c=tasks.filter(x=>x.d===d&&x.done).length,tt=tasks.filter(x=>x.d===d).length;
+  return `<div class="day"><em>${label(d)}</em><span>${c.toLocaleString('ar-EG')}/${tt.toLocaleString('ar-EG')} تمت</span></div>`+g.map(x=>`<div class="task ${x.done?'done':''}"><button class="chk" data-c="${x.id}">${x.done?'✓':''}</button><div class="t">${esc(x.t)}</div><button class="del" data-x="${x.id}">×</button></div>`).join('')}).join(''):'<div class="empty">مفيش مهام هنا</div>';
+}
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function add(t,d){t=t.trim();if(!t)return;tasks.push({id:Date.now(),t,d:d||$('#when').value||today(),done:false});$('#txt').value='';save()}
+// فهم التاريخ من الكلام
+function parse(s){let d=null;const m=[[/(بعد بكرة|بعد بكره)/,2],[/(بكرة|بكره|غدا|غداً)/,1],[/(النهارده|النهاردة|اليوم)/,0],[/(امبارح|أمس)/,-1]];
+ for(const[r,n]of m)if(r.test(s)){d=plus(n);s=s.replace(r,'');break}
+ return{t:s.replace(/\s+/g,' ').trim(),d}}
+$('#add').onclick=()=>{const p=parse($('#txt').value);add(p.t,p.d)};
+$('#txt').onkeydown=e=>{if(e.key==='Enter')$('#add').click()};
+$('#list').onclick=e=>{const c=e.target.closest('[data-c]'),x=e.target.closest('[data-x]');
+ if(c){const t=tasks.find(y=>y.id==c.dataset.c);t.done=!t.done;save()}
+ if(x){tasks=tasks.filter(y=>y.id!=x.dataset.x);save()}};
+$('#tabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;filter=b.dataset.f;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));render()};
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null;
+$('#mic').onclick=()=>{
+ if(!SR){$('#hint').textContent='المتصفح ده مش بيدعم الصوت. جرّب Chrome أو Safari، أو استخدم مايك كيبورد الموبايل.';$('#txt').focus();return}
+ if(rec){rec.stop();return}
+ rec=new SR();rec.lang='ar-EG';rec.interimResults=true;
+ rec.onstart=()=>{$('#mic').classList.add('rec');$('#hint').textContent='بسمعك… اتكلم'};
+ rec.onresult=e=>{$('#txt').value=[...e.results].map(r=>r[0].transcript).join(' ')};
+ rec.onerror=()=>{$('#hint').textContent='مسمعتش كويس، جرّب تاني'};
+ rec.onend=()=>{$('#mic').classList.remove('rec');rec=null;const p=parse($('#txt').value);if(p.t){add(p.t,p.d);$('#hint').textContent='اتضافت ✓'}};
+ rec.start()};
+$('#when').value=today();render();
+</script>
+</body></html>
