@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e"><title>مسجل الاجتماعات</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,"Segoe UI",Tahoma,Arial,sans-serif;background:#f1f5f4;color:#10231f;min-height:100vh}
+.app{max-width:480px;margin:auto;padding:14px 14px 40px}
+h1{font-size:20px;margin:6px 4px 12px;display:flex;justify-content:space-between;align-items:center}
+.card{background:#fff;border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:0 1px 6px #0001}
+.rec{text-align:center}
+.timer{font-size:38px;font-weight:700;letter-spacing:2px;direction:ltr;margin:4px 0}
+.mic{display:inline-grid;place-items:center;width:92px;height:92px;border-radius:50%;border:0;background:#0f766e;color:#fff;font-size:38px;box-shadow:0 6px 18px #0f766e66;cursor:pointer}
+.mic.on{background:#dc2626;box-shadow:0 0 0 10px #dc262633;animation:p 1.4s infinite}
+@keyframes p{50%{box-shadow:0 0 0 18px #dc262614}}
+.st{font-size:13px;color:#5b6f6a;margin-top:8px;min-height:18px}
+.spk{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;justify-content:center}
+.chip{border:2px solid var(--c);color:var(--c);background:#fff;border-radius:999px;padding:7px 14px;font-size:14px;font-weight:600;cursor:pointer}
+.chip.sel{background:var(--c);color:#fff}
+.hint{font-size:12px;color:#5b6f6a;margin-top:6px}
+.tabs{display:flex;background:#e2ebe9;border-radius:12px;padding:3px;margin-bottom:12px}
+.tabs button{flex:1;border:0;background:none;padding:9px;border-radius:10px;font-size:14px;font-weight:600;color:#47605a}
+.tabs .a{background:#fff;color:#0f766e;box-shadow:0 1px 3px #0002}
+.seg{display:flex;gap:8px;margin-bottom:12px}
+.av{flex:none;width:34px;height:34px;border-radius:50%;background:var(--c);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px}
+.bub{background:#f4f8f7;border-radius:4px 14px 14px 14px;padding:8px 11px;flex:1}
+.bub b{font-size:12px;color:var(--c)} .bub time{font-size:11px;color:#8a9b97;float:left;direction:ltr}
+.bub p{margin:3px 0 0;line-height:1.7;font-size:15px}
+.live{opacity:.6;font-style:italic}
+.btn{border:0;border-radius:12px;padding:11px 14px;font-size:14px;font-weight:600;background:#0f766e;color:#fff;margin:3px}
+.btn.g{background:#e2ebe9;color:#0f766e}
+.sum h3{margin:10px 0 4px;font-size:15px;color:#0f766e}
+.sum li{line-height:1.8;font-size:14px}
+.empty{text-align:center;color:#8a9b97;padding:24px 8px;font-size:14px}
+.li{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #eef2f1}
+.li:last-child{border:0} .li small{color:#8a9b97;display:block}
+input.t{border:0;border-bottom:1px dashed #9db;font:inherit;font-weight:700;width:60%;background:none}
+</style></head><body><div class="app">
+<h1><span>مسجل الاجتماعات</span><button class="btn g" id="newb" style="font-size:12px;padding:6px 10px">اجتماع جديد</button></h1>
+
+<div class="card rec">
+ <div class="timer" id="timer">00:00</div>
+ <button class="mic" id="mic" aria-label="تسجيل"><svg width="40" height="40" viewBox="0 0 24 24" fill="#fff"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg></button>
+ <div class="st" id="st">اضغط الميكروفون وابدأ الاجتماع</div>
+ <div class="spk" id="spk"></div>
+ <div class="hint">اضغط اسم المتحدث وقت ما يتغير الكلام، وكل جملة تتسجل باسمه. اضغط مطولًا على الاسم لتغييره.</div>
+</div>
+
+<div class="tabs"><button class="a" data-t="tx">النص</button><button data-t="sm">الملخص</button><button data-t="hs">المحفوظ</button></div>
+
+<div id="tx" class="card"></div>
+<div id="sm" class="card sum" style="display:none"></div>
+<div id="hs" class="card" style="display:none"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const COL=['#0f766e','#b45309','#7c3aed','#be123c','#1d4ed8','#4d7c0f'];
+let S={id:Date.now(),title:'اجتماع '+new Date().toLocaleDateString('ar-EG'),names:['المتحدث 1','المتحدث 2','المتحدث 3','المتحدث 4'],segs:[],sec:0};
+let cur=0,rec=false,sr=null,mr=null,chunks=[],tm=null,liveTxt='',audioURL='';
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+const save=()=>{const a=JSON.parse(localStorage.mrec||'[]').filter(x=>x.id!==S.id);if(S.segs.length)a.unshift(S);localStorage.mrec=JSON.stringify(a.slice(0,30))};
+
+function drawSpk(){ $('spk').innerHTML='';
+ S.names.forEach((n,i)=>{const b=document.createElement('button');b.className='chip'+(i===cur?' sel':'');b.style.setProperty('--c',COL[i]);b.textContent=n;
+  b.onclick=()=>{cur=i;drawSpk()};
+  let t;b.onpointerdown=()=>t=setTimeout(()=>{const v=prompt('اسم المتحدث',n);if(v){S.names[i]=v;drawSpk();drawTx()}},600);
+  b.onpointerup=b.onpointerleave=()=>clearTimeout(t);$('spk').appendChild(b)});}
+function drawTx(){const el=$('tx');
+ if(!S.segs.length&&!liveTxt){el.innerHTML='<div class="empty">النص هيظهر هنا وانت بتتكلم</div>';return}
+ el.innerHTML=S.segs.map(g=>`<div class="seg" style="--c:${COL[g.s]}"><div class="av">${S.names[g.s].trim()[0]}</div><div class="bub"><time>${fmt(g.t)}</time><b>${S.names[g.s]}</b><p>${esc(g.x)}</p></div></div>`).join('')+
+ (liveTxt?`<div class="seg" style="--c:${COL[cur]}"><div class="av">…</div><div class="bub live"><b>${S.names[cur]}</b><p>${esc(liveTxt)}</p></div></div>`:'')+
+ `<div style="text-align:center"><button class="btn g" onclick="addManual()">+ إضافة جملة يدويًا</button><button class="btn g" onclick="exportTxt()">تصدير نص</button></div>`;}
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function addSeg(x){x=x.trim();if(!x)return;S.segs.push({s:cur,t:S.sec,x});save();drawTx();window.scrollTo({top:document.body.scrollHeight})}
+function addManual(){const v=prompt('اكتب الجملة ('+S.names[cur]+')');if(v)addSeg(v)}
+
+function startSR(){ if(!SR){$('st').textContent='المتصفح لا يدعم التحويل التلقائي، استخدم Chrome أو اكتب يدويًا';return}
+ sr=new SR();sr.lang='ar-EG';sr.continuous=true;sr.interimResults=true;
+ sr.onresult=e=>{let it='';for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal){addSeg(r[0].transcript);}else it+=r[0].transcript}liveTxt=it;drawTx()};
+ sr.onerror=e=>{if(e.error==='not-allowed')$('st').textContent='الميكروفون مرفوض، فعّل الإذن من إعدادات المتصفح'};
+ sr.onend=()=>{liveTxt='';if(rec)try{sr.start()}catch(e){}};
+ try{sr.start()}catch(e){}}
+async function start(){
+ try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  chunks=[];mr=new MediaRecorder(stream);mr.ondataavailable=e=>chunks.push(e.data);
+  mr.onstop=()=>{stream.getTracks().forEach(t=>t.stop());audioURL=URL.createObjectURL(new Blob(chunks,{type:mr.mimeType}));drawSm()};mr.start();
+ }catch(e){$('st').textContent='تعذر تشغيل الميكروفون: لازم الصفحة تتفتح من رابط https أو ملف على الموبايل';return}
+ rec=true;$('mic').classList.add('on');$('mic').innerHTML='<svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><rect x="5" y="5" width="14" height="14" rx="3"/></svg>';$('st').textContent='جاري التسجيل والكتابة...';
+ tm=setInterval(()=>{S.sec++;$('timer').textContent=fmt(S.sec)},1000);startSR();}
+function stop(){rec=false;clearInterval(tm);try{sr&&sr.stop()}catch(e){}try{mr&&mr.state!=='inactive'&&mr.stop()}catch(e){}
+ $('mic').classList.remove('on');$('mic').innerHTML='<svg width="40" height="40" viewBox="0 0 24 24" fill="#fff"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';$('st').textContent='تم الإيقاف. شوف تبويب الملخص';liveTxt='';save();drawTx();drawSm();}
+$('mic').onclick=()=>rec?stop():start();
+
+const STOP=new Set('في من على إلى الى عن مع هو هي هم انا أنا احنا إحنا ده دي دا ان أن إن لو بس كمان يعني طيب اه لا ايوه أيوه ما مش كان كانت يكون بعد قبل عشان علشان اللي التي الذي هذا هذه ذلك كل فيه فى و أو او ثم لكن لكنه قد تم هل ايه إيه ازاي إزاي'.split(' '));
+function words(s){return s.replace(/[^\u0600-\u06FFa-zA-Z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>2&&!STOP.has(w))}
+function summarize(){const segs=S.segs;if(!segs.length)return null;
+ const f={};segs.forEach(g=>words(g.x).forEach(w=>f[w]=(f[w]||0)+1));
+ const score=g=>{const w=words(g.x);return w.length?w.reduce((a,x)=>a+f[x],0)/Math.sqrt(w.length)+Math.min(w.length,25)/10:0};
+ const top=[...segs].map((g,i)=>({g,i,s:score(g)})).sort((a,b)=>b.s-a.s).slice(0,Math.min(5,Math.ceil(segs.length/2))).sort((a,b)=>a.i-b.i).map(o=>o.g);
+ const act=/(لازم|هنعمل|هعمل|هنبعت|هبعت|مطلوب|المطلوب|يتم|نخلص|نراجع|متابعة|ميعاد|موعد|آخر|اخر|قبل يوم|الأسبوع|الاسبوع|بكرة|هنتفق|قرار|قررنا|اتفقنا|ضروري|must|todo|deadline)/;
+ const acts=segs.filter(g=>act.test(g.x));
+ const kw=Object.entries(f).sort((a,b)=>b[1]-a[1]).slice(0,8).map(e=>e[0]);
+ const cnt={};segs.forEach(g=>cnt[g.s]=(cnt[g.s]||0)+g.x.split(/\s+/).length);
+ return{top,acts,kw,cnt}}
+function drawSm(){const r=summarize(),el=$('sm');
+ if(!r){el.innerHTML='<div class="empty">سجّل جزء من الاجتماع الأول</div>';return}
+ const tot=Object.values(r.cnt).reduce((a,b)=>a+b,0);
+ el.innerHTML=`<input class="t" value="${esc(S.title)}" onchange="S.title=this.value;save()"> <small>${fmt(S.sec)}</small>
+ <h3>أهم النقاط</h3><ul>${r.top.map(g=>`<li>${esc(g.x)} <small>(${esc(S.names[g.s])})</small></li>`).join('')}</ul>
+ <h3>قرارات ومهام محتملة</h3>${r.acts.length?`<ul>${r.acts.map(g=>`<li>${esc(g.x)}</li>`).join('')}</ul>`:'<div class="hint">مفيش جمل واضحة فيها مهام</div>'}
+ <h3>كلمات متكررة</h3><div>${r.kw.map(k=>`<span class="chip sel" style="--c:#0f766e;font-size:12px;padding:3px 9px;margin:2px;display:inline-block">${esc(k)}</span>`).join('')}</div>
+ <h3>نسبة الكلام</h3>${Object.entries(r.cnt).map(([s,n])=>`<div style="font-size:13px;margin:4px 0">${esc(S.names[s])} ${Math.round(n/tot*100)}%<div style="height:7px;border-radius:4px;background:${COL[s]};width:${Math.round(n/tot*100)}%"></div></div>`).join('')}
+ <div style="margin-top:12px;text-align:center"><button class="btn" onclick="copyAI()">نسخ للتلخيص بالذكاء الاصطناعي</button>
+ ${audioURL?`<a class="btn g" style="text-decoration:none;display:inline-block" href="${audioURL}" download="meeting.webm">حفظ الصوت</a>`:''}</div>
+ <div class="hint">هذا ملخص تلقائي على الجهاز بدون إنترنت. للملخص الأذكى اضغط النسخ والصقه في ChatGPT أو Gemini.</div>`}
+function plain(){return S.title+'\n\n'+S.segs.map(g=>`[${fmt(g.t)}] ${S.names[g.s]}: ${g.x}`).join('\n')}
+function copyAI(){const t='لخّص هذا الاجتماع بالعربي: أهم النقاط، القرارات، المهام ومين مسؤول عنها، والمواعيد.\n\n'+plain();
+ (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>alert('تم النسخ، الصقه في تطبيق الذكاء الاصطناعي'),()=>prompt('انسخ النص',t))}
+function exportTxt(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([plain()],{type:'text/plain'}));a.download='meeting.txt';a.click()}
+function drawHs(){const a=JSON.parse(localStorage.mrec||'[]'),el=$('hs');
+ el.innerHTML=a.length?a.map(m=>`<div class="li"><div onclick="openM(${m.id})"><b>${esc(m.title)}</b><small>${m.segs.length} جملة · ${fmt(m.sec)}</small></div><button class="btn g" onclick="delM(${m.id})">حذف</button></div>`).join(''):'<div class="empty">لا توجد اجتماعات محفوظة</div>'}
+function openM(id){const m=JSON.parse(localStorage.mrec||'[]').find(x=>x.id===id);if(m){if(rec)stop();S=m;cur=0;drawAll();tab('tx')}}
+function delM(id){localStorage.mrec=JSON.stringify(JSON.parse(localStorage.mrec||'[]').filter(x=>x.id!==id));drawHs()}
+$('newb').onclick=()=>{if(rec)stop();S={id:Date.now(),title:'اجتماع '+new Date().toLocaleDateString('ar-EG'),names:['المتحدث 1','المتحدث 2','المتحدث 3','المتحدث 4'],segs:[],sec:0};audioURL='';$('timer').textContent='00:00';drawAll();tab('tx')};
+function tab(t){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('a',b.dataset.t===t));['tx','sm','hs'].forEach(x=>$(x).style.display=x===t?'':'none');if(t==='sm')drawSm();if(t==='hs')drawHs()}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+function drawAll(){$('timer').textContent=fmt(S.sec);drawSpk();drawTx();drawSm();drawHs()}
+if(location.hash.includes('demo')){S.names[0]='صابر';S.names[1]='أحمد';S.sec=312;cur=1;
+ [[0,5,'صباح الخير يا جماعة، النهارده هنتكلم عن خطة المشروع الجديد وميزانية الربع الجاي'],[1,22,'الميزانية المقترحة ٢٠٠ ألف جنيه، ولازم نخلص التصميم قبل نهاية الأسبوع'],[0,48,'تمام، أنا هبعت العرض للعميل بكرة، وأحمد يراجع التصميم'],[1,95,'اتفقنا إن الاجتماع الجاي يوم الأحد، وهنراجع التصميم والميزانية مرة تانية'],[2,140,'عندي ملاحظة على الميزانية، محتاجين نزود بند التسويق']].forEach(a=>S.segs.push({s:a[0],t:a[1],x:a[2]}));S.names[2]='منى';liveTxt='ولازم نحدد الميعاد النهائي'}
+drawAll();if(location.hash.includes('demo')&&0)0;
+if(location.hash.includes('sum'))tab('sm');
+</script></body></html>
